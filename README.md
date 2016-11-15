@@ -19,6 +19,8 @@ Be aware that it removes your `node_modules` directory and reinstalls your node 
 ## Arguments
 
 ```sh
+    -d, --remove-shrinkwrap : deletes the shrinkwrap file prior to install
+    -nd, --no-dev : doesn't include dev dependencies in the shrinkwrap file
     -ni, --no-install : doesn't install
     -v, --version : outputs just the version
     -h, --help : outputs this help information

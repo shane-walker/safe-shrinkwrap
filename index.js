@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 var path = require('path')
+  , async = require('async')
   , cp = require('child_process')
   , fs = require('fs')
   , glob = require('glob')
@@ -12,10 +13,23 @@ var path = require('path')
   })
 
   , shouldInstall = process.argv.indexOf('--no-install') === -1 && process.argv.indexOf('-ni') === -1
-  , command = shouldInstall ?
-      'npm cache clear && npm install && npm prune && npm dedupe && npm shrinkwrap --dev' :
-      'npm prune && npm dedupe && npm shrinkwrap --dev'
+  , includeDevDependencies = process.argv.indexOf('--no-dev') === -1 && process.argv.indexOf('-nd') === -1
+  , shouldRemoveShrinkwrapFile = process.argv.indexOf('--remove-shrinkwrap') !== -1 || process.argv.indexOf('-d') !== -1
 
+  , commands = [
+    'npm cache clear',
+    shouldRemoveShrinkwrapFile ?
+      './npm-shrinkwrap.json' :
+      '',
+    shouldInstall ?
+      'npm install' :
+      '',
+    'npm prune',
+    'npm dedupe',
+    includeDevDependencies ?
+      'npm shrinkwrap --dev' :
+      'npm shrinkwrap'
+  ]
   , isProblematic = function (badDeps) {
       return function (name) {
         return badDeps.indexOf(name) !== -1;
@@ -45,7 +59,9 @@ if (process.argv.indexOf('-v') >= 0 || process.argv.indexOf('--version') >= 0) {
 if (process.argv.indexOf('-h') >= 0 || process.argv.indexOf('--help') >= 0) {
   console.log(`safe-shrinkwrap version: ${pkg.version}`);
   console.log('');
-  console.log(`    -ni, --no-install : doesn't install`)
+  console.log(`    -d, --remove-shrinkwrap : deletes the shrinkwrap prior to install`)
+  console.log(`    -nd, --no-dev : doesn't include dev dependencies in the shrinkwrap file`)
+  console.log(`    -ni, --no-install : doesn't run npm install`)
   console.log(`    -v, --version : outputs just the version`)
   console.log(`    -h, --help : outputs this help information`)
   process.exit(0);
@@ -57,7 +73,23 @@ if (shouldInstall) {
 
 spinner.start();
 
-cp.exec(command, function (err, stdout, stderr) {
+function wrapExec(command, callback) {
+  cp.exec(command, function(err, stdout, stderr) {
+    if (err) {
+      callback(err);
+      return;
+    }
+
+    callback(null, {command: command, stdout: stdout, stderr: stderr});
+  });
+}
+
+async.series(commands.map(function(cmd) {
+  if (!cmd) return function(callback) { callback(null, true); };
+  else if (cmd === './npm-shrinkwrap.json') return async.apply(fs.unlink, cmd);
+
+  return async.apply(wrapExec, cmd)
+}), function(err, result) {
   if (err) {
     console.log(err);
     return;
