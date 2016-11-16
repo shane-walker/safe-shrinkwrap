@@ -84,9 +84,27 @@ function wrapExec(command, callback) {
   });
 }
 
+function wrapUnlink(path, callback) {
+  fs.access(path, fs.F_OK, function(err) {
+    // catch error when file doesn't exist and return as success
+    if (err) {
+      callback();
+      return;
+    }
+
+    fs.unlink(path, function(err, result) {
+      if (err) {
+        callback(err);
+        return;
+      }
+      callback();
+    });
+  });
+}
+
 async.series(commands.map(function(cmd) {
   if (!cmd) return function(callback) { callback(null, true); };
-  else if (cmd === './npm-shrinkwrap.json') return async.apply(fs.unlink, cmd);
+  else if (cmd === './npm-shrinkwrap.json') return async.apply(wrapUnlink, cmd);
 
   return async.apply(wrapExec, cmd)
 }), function(err, result) {
@@ -114,8 +132,8 @@ async.series(commands.map(function(cmd) {
 
     finalObj.dependencies = clean;
 
-    fs.writeFile(path.join(process.cwd(), './npm-shrinkwrap.json'), JSON.stringify(finalObj));
-    fs.writeFile(path.join(process.cwd(), './npm-shrinkwrap.unsafe.json'), JSON.stringify(shrinkwrapped));
+    fs.writeFile(path.join(process.cwd(), './npm-shrinkwrap.json'), JSON.stringify(finalObj, null, 4));
+    fs.writeFile(path.join(process.cwd(), './npm-shrinkwrap.unsafe.json'), JSON.stringify(shrinkwrapped, null, 4));
     spinner.stop();
 
     console.log("They're done! So is your shrinkwrap file.");
