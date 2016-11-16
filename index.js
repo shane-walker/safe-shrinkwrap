@@ -132,8 +132,8 @@ async.series(commands.map(function(cmd) {
 
     finalObj.dependencies = clean;
 
-    fs.writeFile(path.join(process.cwd(), './npm-shrinkwrap.json'), JSON.stringify(finalObj, null, 2));
-    fs.writeFile(path.join(process.cwd(), './npm-shrinkwrap.unsafe.json'), JSON.stringify(shrinkwrapped, null, 2));
+    fs.writeFile(path.join(process.cwd(), './npm-shrinkwrap.json'), `${JSON.stringify(finalObj, null, 2)}\n`);
+    fs.writeFile(path.join(process.cwd(), './npm-shrinkwrap.unsafe.json'), `${JSON.stringify(shrinkwrapped, null, 2)}\n`);
     spinner.stop();
 
     console.log("They're done! So is your shrinkwrap file.");
